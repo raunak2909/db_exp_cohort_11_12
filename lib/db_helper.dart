@@ -6,73 +6,100 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DbHelper {
+  String table_note = "note";
+  static String col_note_id = "note_id";
+  static String col_note_title = "note_title";
+  static String col_note_desc = "note_desc";
+  static String col_created_at = "created_at";
+
   ///1
-  DbHelper._(); /// private constructor
+  DbHelper._();
+
+  /// private constructor
   ///2
   static DbHelper getInstance() {
-    return DbHelper._(); /// singleton
-  }
-   ///Database
-   Database? mDB;
+    return DbHelper._();
 
-   ///open
-   Future<Database> initDB() async {
-     /*if(mDB==null){
+    /// singleton
+  }
+
+  ///Database
+  Database? mDB;
+
+  ///open
+  Future<Database> initDB() async {
+    /*if(mDB==null){
        mDB = await openDB();
      }*/
-     mDB ??= await openDB();
-     return mDB!;
-   }
+    mDB ??= await openDB();
+    return mDB!;
+  }
 
   ///create
-   Future<Database> openDB() async {
+  Future<Database> openDB() async {
+    /// data/data/com.example.db_exp_cohort_11_12/databases/notesDB.db
+    Directory appDir = await getApplicationDocumentsDirectory();
+    String dbPath = join(appDir.path, "notesDB.db");
+    return await openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: (db, version) {
+        ///tables creation
+        db.execute(
+          "create table $table_note ( $col_note_id integer primary key autoincrement, $col_note_title text, $col_note_desc text, $col_created_at text )",
+        );
+      },
+    );
+  }
 
-     /// data/data/com.example.db_exp_cohort_11_12/databases/notesDB.db
-     Directory appDir = await getApplicationDocumentsDirectory();
-     String dbPath = join(appDir.path, "notesDB.db");
-     return await openDatabase(dbPath, version: 1, onCreate: (db, version){
-       ///tables creation
-       db.execute("create table note ( note_id integer primary key autoincrement, note_title text, note_desc text, created_at text )");
-     });
+  ///query
+  ///insert, select(read), update, delete - note app
+  /// insert
+  Future<bool> addNote({required String title, required String desc}) async {
+    Database db = await initDB();
 
-   }
+    int rowsEffected = await db.insert(table_note, {
+      col_note_title: title,
+      col_note_desc: desc,
+      col_created_at: DateTime.now().millisecondsSinceEpoch.toString(),
+    });
 
+    return rowsEffected > 0;
+  }
 
+  Future<List<Map<String, dynamic>>> fetchAllNotes() async {
+    Database db = await initDB();
 
+    return await db.query(table_note);
+  }
 
-   ///query
-   ///insert, select(read), update, delete - note app
-   /// insert
-   void addNote({required String title, required String desc}) async {
-     Database db = await initDB();
+  Future<bool> updateNote({
+    required String updTitle,
+    required String updDesc,
+    required int id,
+  }) async {
+    var db = await initDB();
+    int rowsEffected = await db.update(table_note, {
+      col_note_title: updTitle,
+      col_note_desc: updDesc,
+    }, where: "$col_note_id = $id");
 
-     db.insert("note", {
-       "note_title": title,
-       "note_desc": desc,
-       "created_at" : DateTime.now().millisecondsSinceEpoch.toString()
-     });
+    /// where note_id = 3
+    return rowsEffected > 0;
+  }
 
-   }
+  Future<bool> deleteNote({required int id}) async {
+    var db = await initDB();
 
-   Future<List<Map<String, dynamic>>> fetchAllNotes() async {
-     Database db = await initDB();
+    int rowsEffected = await db.delete(
+      table_note,
+      where: "$col_note_id = ?",
+      whereArgs: ["$id"],
+    );
 
-     return await db.query("note");
-   }
-
+    return rowsEffected > 0;
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 /// Expense App UI - 6 UI
 /// create a repo
